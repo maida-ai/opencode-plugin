@@ -12,7 +12,7 @@ import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { randomUUID } from "node:crypto";
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
-import { loadConfig, loadValidatedRun } from "@maida-ai/core";
+import { loadConfig, loadValidatedRun, SPEC_VERSION } from "@maida-ai/core";
 import type { Event } from "@opencode-ai/sdk";
 import { buildHookMap } from "../src/hooks.js";
 import { clearAllSessions } from "../src/session.js";
@@ -537,10 +537,10 @@ describe("current trace storage contract", () => {
     await fireEvent("session.deleted", { info: makeSessionInfo("sess-spec") });
 
     const meta = readMetaJson(tempDir);
-    expect(meta.spec_version).toBe("0.2");
+    expect(meta.spec_version).toBe(SPEC_VERSION);
     const traceId = String(meta.trace_id);
     const validated = loadValidatedRun(traceId, { data_dir: tempDir });
-    expect(validated.meta.spec_version).toBe("0.2");
+    expect(validated.meta.spec_version).toBe(SPEC_VERSION);
     expect(validated.meta.trace_id).toBe(traceId);
 
     const spans = readSpans(tempDir);
@@ -550,7 +550,7 @@ describe("current trace storage contract", () => {
       expect(span.span_id).toMatch(/^[0-9a-f]{16}$/);
       expect(span).toHaveProperty("status_description");
       if ("spec_version" in span) {
-        expect(span.spec_version).toBe("0.2");
+        expect(span.spec_version).toBe(SPEC_VERSION);
       }
     }
 
