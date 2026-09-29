@@ -204,7 +204,7 @@ describe("cross-repo trace fixtures", () => {
     const { dataDir, traceId } = materializeFixture("malformed", "invalid-span-id");
 
     expect(() => loadValidatedRun(traceId, { data_dir: dataDir })).toThrow(
-      /spans\.jsonl line 1 has invalid span_id/,
+      /spans\.jsonl line 1 has an invalid span_id/,
     );
   });
 });

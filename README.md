@@ -9,11 +9,15 @@ This plugin maps OpenCode session, message, and tool lifecycle events into the s
 ## First time using Maida?
 
 ```bash
-uv tool install "maida-ai==0.5.3"
+uv tool install "maida-ai==0.6.0"
 maida demo --regression
 ```
 
 Expect a deliberate FAIL and a PR-comment preview. Continue with the [released coding-agent walkthrough](https://maida.ai/docs/getting-started/): capture one task, review a few checks, prove pass/fail/repair, then add CI. Runnable examples and demos live together in [maida-tutorials](https://github.com/maida-ai/maida-tutorials).
+
+## Versioning
+
+`@maida-ai/opencode` uses the Python engine's tested `MAJOR.MINOR` compatibility line and its own `PATCH` npm package version. Publish immutable full `vMAJOR.MINOR.PATCH` tags for numbered releases. Verify support against the shared trace contract and cross-repository tests before adopting a new engine line; matching numbers alone do not establish feature parity. See the [Maida versioning policy](https://github.com/maida-ai/maida/blob/main/CONTRIBUTING.md#versioning-and-compatibility).
 
 ## How to use it
 
@@ -82,7 +86,7 @@ This plugin records the following OpenCode events into Maida spans that project 
 
 ### Storage contract & compatibility
 
-This plugin writes the **current OTel-style trace format (`spec_version` `0.2`)** through the `@maida-ai/core` storage API. `@maida-ai/core` is the TypeScript write-side mirror used by this adapter; the main Python Maida package remains the source of truth for the public on-disk contract. The plugin does not vendor the Python package or implement a second storage writer.
+This plugin writes the **current OTel-style trace format (`spec_version` `0.2.0`)** through the `@maida-ai/core` storage API. `@maida-ai/core` is the TypeScript write-side mirror used by this adapter; the main Python Maida package remains the source of truth for the public on-disk contract. The plugin does not vendor the Python package or implement a second storage writer.
 
 On-disk layout for each run:
 
@@ -99,7 +103,7 @@ Attribute conventions follow the core mapping: LLM turns use `gen_ai.*` attribut
 
 Compatibility notes:
 
-- Requires `@maida-ai/core` `^0.4.0`; the plugin emits the current format only.
+- Requires `@maida-ai/core` `^0.5.3`; the plugin emits the current format only.
 - The legacy `run.json` + `events.jsonl` layout (`spec_version` `0.1`) is no longer written. As of the v0.4.x hardening, `0.2` is the earliest fully supported format — re-record older sessions rather than relying on them.
 - External tooling should read `spec_version` from `meta.json` to detect the format and validate runs with Python Maida's reader or `@maida-ai/core`'s `loadValidatedRun`, which fails with a clear message on unsupported or malformed runs.
 - The repository includes contract-correct fixture traces under `tests/fixtures/traces/`. Those fixtures omit span-level `spec_version` intentionally and can be copied under `<data_dir>/runs/<trace_id>/` for cross-repo conformance tests.
