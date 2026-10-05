@@ -2,7 +2,7 @@
 
 Original audit: 2026-07-09 (maida-ai/opencode-plugin#5)
 
-Last verified: 2026-09-29 against the Maida 0.6.0 line.
+Last verified: 2026-10-04 against released Maida v0.6.1.
 
 ## Current Output
 
@@ -18,6 +18,14 @@ The plugin writes local Maida trace data under `<data_dir>/runs/<trace_id>/` as 
 
 - The plugin's 26 tests, TypeScript lint, and build pass after a clean install from the lockfile with the published `@maida-ai/core` 0.6.0 package.
 - A regression demo trace produced through the plugin hooks was loaded by Python source at the Maida `v0.6.0` tag using `load_validated_run()` and projected by `load_run_for_analysis()`. It declared `spec_version: "0.2.0"`, status `ok`, eight spans, and `RUN_START`, `TOOL_CALL`, `LOOP_WARNING`, `LLM_CALL`, and `RUN_END` events.
+
+## Maida v0.6.1 Verification
+
+- The existing 26 plugin tests, TypeScript lint, and build passed with the checkout's locked `@maida-ai/core` 0.6.0 dependency. No package version or dependency selection was changed.
+- The published `maida-ai==0.6.1` package validated and read the normal, tool-loop, and missing-terminal-state fixtures, then projected their expected events. The unfinished fixture remained `running` without `RUN_END`; validation did not turn it into a completed execution. The malformed span-ID fixture was rejected by both the CLI validator and Python reader.
+- Fresh good and regression demo traces emitted through the plugin hooks declared `spec_version: "0.2.0"` and were read and projected by the released engine: three tool calls without a loop versus five tool calls with one loop warning. The displayed tool commands and model responses were offline fixtures.
+- The first-user README now installs that released engine, requires explicit OpenCode plugin configuration, and selects the plugin's explicit trace ID. Maida v0.6.1's `maida init` / `maida check` first-report path selects initialized Claude capture, not this plugin's runs.
+- This verification covers local trace compatibility and offline fixtures. It does not establish live OpenCode capture, answer correctness, or protected GitHub merge enforcement.
 
 ## Cross-Repo Conformance Fixtures
 

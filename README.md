@@ -1,41 +1,57 @@
-## What is it
+# Maida OpenCode trace capture
 
-`@maida-ai/opencode` is an OpenCode plugin that records your OpenCode sessions as Maida OTel-style traces. It writes `meta.json` and `spans.jsonl` under:
+**Maida checks agent changes before merge.** This supported extension records local OpenCode sessions for the [Maida engine and CLI](https://github.com/maida-ai/maida). The [canonical runnable experience](https://github.com/maida-ai/maida-tutorials) and [GitHub Action](https://github.com/maida-ai/maida-assert) belong to the core product.
+
+`@maida-ai/opencode` records your OpenCode sessions as Maida OTel-style traces. It writes `meta.json` and `spans.jsonl` under:
 
 `~/.maida/runs/<trace_id>/`
 
 This plugin maps OpenCode session, message, and tool lifecycle events into the structural trace format consumed by the main Python Maida package and CLI (`maida-ai` / `maida`) at `github.com/maida-ai/maida.git`. The Python package is the public trace-format source of truth; this plugin is the OpenCode adapter that records local traces for that tooling to read.
 
-## First time using Maida?
+## First run: capture your OpenCode session
 
-```bash
-uv tool install "maida-ai==0.6.0"
-maida demo --regression
-```
-
-Expect a deliberate FAIL and a PR-comment preview. Continue with the [released coding-agent walkthrough](https://maida.ai/docs/getting-started/): capture one task, review a few checks, prove pass/fail/repair, then add CI. Runnable examples and demos live together in [maida-tutorials](https://github.com/maida-ai/maida-tutorials).
-
-## Versioning
-
-`@maida-ai/opencode` uses the Python engine's tested `MAJOR.MINOR` compatibility line and its own `PATCH` npm package version. Publish immutable full `vMAJOR.MINOR.PATCH` tags for numbered releases. Verify support against the shared trace contract and cross-repository tests before adopting a new engine line; matching numbers alone do not establish feature parity. See the [Maida versioning policy](https://github.com/maida-ai/maida/blob/main/CONTRIBUTING.md#versioning-and-compatibility).
-
-## How to use it
+Start in the Git repository where you use OpenCode. Maida v0.6.1 requires Python 3.12–3.14; this plugin requires Node.js 24 or newer.
 
 ### Install
 
-Add `@maida-ai/opencode` to your project's `package.json` dependencies:
+Install the Maida CLI and add the plugin to your project's dependencies:
 
 ```bash
+uv tool install "maida-ai==0.6.1"
+
+cd my-repo
 npm install @maida-ai/opencode
 ```
 
-OpenCode automatically installs npm plugins from the project `node_modules/` at startup.
+### Enable in OpenCode
 
-### Add the Maida coding-agent skills
+Add the package to the `plugin` list in `opencode.json`, preserving existing settings and other plugins:
 
-The plugin records OpenCode sessions. The complementary, portable skills in
-[`maida-ai/skills`](https://github.com/maida-ai/skills) guide a coding agent
-through the rest of the local Maida workflow:
+```json
+{
+  "$schema": "https://opencode.ai/config.json",
+  "plugin": ["@maida-ai/opencode"]
+}
+```
+
+Adding the dependency alone does not enable capture. Restart OpenCode after configuring the plugin.
+
+### Capture and inspect one task
+
+Run one normal, bounded OpenCode task, finish the session, then close OpenCode to finalize the recorded run. A session becoming idle only flushes data; it is not completion evidence. Find that session's explicit trace ID in its local `meta.json`, then validate and inspect the same run:
+
+```bash
+maida validate-trace /path/to/data/runs/TRACE_ID
+maida view TRACE_ID
+```
+
+Replace the path and ID with your recorded run. If you configured a custom `MAIDA_DATA_DIR`, use it consistently for capture and read commands. Review a baseline and policy before comparing with `maida assert TRACE_ID --baseline PATH --policy PATH`. This reads one observed execution; it does not replace a multi-trial gate or establish answer correctness. Bare read commands may select another run, and `maida check` does not select this plugin's sessions.
+
+Maida v0.6.1's `maida init` / `maida check` first-report route selects initialized Claude captures. Follow the OpenCode steps above for this extension; the [released coding-agent walkthrough](https://maida.ai/docs/getting-started/) documents the Claude route.
+
+## Add the Maida coding-agent skills (optional)
+
+The plugin records OpenCode sessions. The complementary, portable skills in [`maida-ai/skills`](https://github.com/maida-ai/skills) guide a coding agent through the rest of the local Maida workflow:
 
 | Skill | Use it to |
 |---|---|
@@ -43,8 +59,7 @@ through the rest of the local Maida workflow:
 | `maida-add-regression-gate` | Add policy, baseline, and GitHub gate files with reviewable local changes. |
 | `maida-debug-gate` | Reproduce a failing gate, trace the structural change to source, and decide whether it is a regression. |
 
-Install the canonical skills globally for OpenCode from a checkout of the
-skills repository:
+Install the canonical skills globally for OpenCode from a checkout of the skills repository:
 
 ```bash
 ./scripts/install-skills --target opencode product
@@ -62,13 +77,32 @@ Then ask OpenCode to use a skill explicitly, for example:
 Use maida-instrument-agent to instrument this agent repository with Maida.
 ```
 
-OpenCode discovers these standard `SKILL.md` directories; this plugin does not
-copy or vendor their instructions. Updating the `maida-ai/skills` checkout and
-re-running its installer keeps the single canonical skill definitions in use.
-The skills inspect before editing and do not commit, push, upload traces, or use
-cloud services without explicit authorization.
+OpenCode discovers these standard `SKILL.md` directories; this plugin does not copy or vendor their instructions. Updating the `maida-ai/skills` checkout and re-running its installer keeps the single canonical skill definitions in use. The skills inspect before editing and do not commit, push, upload traces, or use cloud services without explicit authorization.
 
-### OpenCode -> Maida mapping
+## Optional rehearsal: see the gate without OpenCode
+
+```bash
+maida demo --regression
+```
+
+The canned, offline rehearsal shows a deliberate FAIL and a PR-comment preview, then exits `0` when the expected failure is reproduced. It does not capture your OpenCode session. The [canonical runnable examples](https://github.com/maida-ai/maida-tutorials) demonstrate the broader Maida product workflow.
+
+## Offline coding-agent regression demo
+
+Replay a deterministic coding-agent refactor through the real plugin hooks. It does not run the displayed tool commands, call a model, require an API key, or use the network:
+
+```bash
+npm run demo:coding-agent -- --mode good
+npm run demo:coding-agent -- --mode regression
+```
+
+Both modes return the same successful final answer. The good trace inspects, edits, and tests once. The regression trace runs the identical `npm test` tool call three times, so its structural summary grows from three to five tool calls and includes a loop warning. The JSON output includes the isolated temporary trace directory for local inspection with Maida. Pass `--data-dir ./some-directory` when you want to control that location.
+
+## Versioning
+
+`@maida-ai/opencode` uses the Python engine's tested `MAJOR.MINOR` compatibility line and its own `PATCH` npm package version. Publish immutable full `vMAJOR.MINOR.PATCH` tags for numbered releases. Verify support against the shared trace contract and cross-repository tests before adopting a new engine line; matching numbers alone do not establish feature parity. See the [Maida versioning policy](https://github.com/maida-ai/maida/blob/main/CONTRIBUTING.md#versioning-and-compatibility).
+
+## OpenCode -> Maida mapping
 
 This plugin records the following OpenCode events into Maida spans that project back to Maida trace events:
 
@@ -84,7 +118,7 @@ This plugin records the following OpenCode events into Maida spans that project 
 | `message.part.updated` (type: `tool`) | `TOOL_CALL` | Records tool calls from OpenCode's streaming event format |
 | Loop detected (algorithmic) | `LOOP_WARNING` | Deduplicates by `pattern + repetitions` via Maida loop detection |
 
-### Storage contract & compatibility
+## Storage contract & compatibility
 
 This plugin writes the **current OTel-style trace format (`spec_version` `0.2.0`)** through the `@maida-ai/core` storage API. `@maida-ai/core` is the TypeScript write-side mirror used by this adapter; the main Python Maida package remains the source of truth for the public on-disk contract. The plugin does not vendor the Python package or implement a second storage writer.
 
@@ -103,49 +137,12 @@ Attribute conventions follow the core mapping: LLM turns use `gen_ai.*` attribut
 
 Compatibility notes:
 
-- Requires `@maida-ai/core` `^0.6.0` and Node.js 24 or newer; the plugin emits the current format only. Tested against Maida Python 0.6.0 for trace reading and projection.
+- Requires `@maida-ai/core` `^0.6.0` and Node.js 24 or newer; the plugin emits the current format only. Fixtures and fresh offline demo traces were checked with released Maida Python v0.6.1 for validation, reading, and projection. This establishes trace compatibility, not support for the Claude-specific `maida check` route or live GitHub enforcement. See the [verification record](docs/trace-compatibility-audit.md).
 - The legacy `run.json` + `events.jsonl` layout (`spec_version` `0.1`) is no longer written. `0.2` is the earliest fully supported format; re-record older sessions rather than relying on them.
 - External tooling should read `spec_version` from `meta.json` to detect the format and validate runs with Python Maida's reader or `@maida-ai/core`'s `loadValidatedRun`, which fails with a clear message on unsupported or malformed runs.
 - The repository includes contract-correct fixture traces under `tests/fixtures/traces/`. Those fixtures omit span-level `spec_version` intentionally and can be copied under `<data_dir>/runs/<trace_id>/` for cross-repo conformance tests.
 
-### Enable in OpenCode
-
-OpenCode loads plugins either from plugin directories or from npm packages via config.
-
-Example `opencode.json`:
-
-```json
-{
-  "$schema": "https://opencode.ai/config.json",
-  "plugin": ["@maida-ai/opencode"]
-}
-```
-
-Restart OpenCode after updating the config.
-
-### View traces
-
-Run OpenCode normally. After a session completes, use the main Maida CLI to inspect or compare the generated traces.
-
-### Offline coding-agent regression demo
-
-Replay a deterministic coding-agent refactor through the real plugin hooks. It
-does not run the displayed tool commands, call a model, require an API key, or
-use the network:
-
-```bash
-npm run demo:coding-agent -- --mode good
-npm run demo:coding-agent -- --mode regression
-```
-
-Both modes return the same successful final answer. The good trace inspects,
-edits, and tests once. The regression trace runs the identical `npm test` tool
-call three times, so its structural summary grows from three to five tool calls
-and includes a loop warning. The JSON output includes the isolated temporary
-trace directory for local inspection with Maida. Pass
-`--data-dir ./some-directory` when you want to control that location.
-
-### Notes
+## Notes
 
 - Maida storage location follows Maida config: `MAIDA_DATA_DIR` if set, or `~/.maida` by default.
 - If you want to disable recording without removing the plugin, set `MAIDA_ENABLED=0`.
